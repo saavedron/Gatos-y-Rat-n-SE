@@ -1,0 +1,1060 @@
+
+;;Hechos iniciales necesarios para la ejecución de las reglas de inicio: 
+;;solicitarPosicion es una hecho de control utilizado para activar la regla de pedir la fila y columna del ratón al usuario
+;;imprimirTablero es un hecho de control para ejecutar la regla de imprimir el tablero, este hecho se añade despúes de cada movimiento tanto de gatos como el del raton
+;;contadorNumeroGato es un hecho que lleva la cuenta de los gatos, utilizado simplemente en la fase inicial para establecer las casillas ocupadas por los gatos al principio del juego.
+;;inicializar es un hecho para inicializar las variables de iteracción utilizadas para crear las casillas con su respectivo índice, empezando con 1 para las filas y columnas 
+(deffacts HechosIniciales
+	(solicitarPosicion)
+	(imprimirTablero)	
+	(contadorNumeroGato 1)
+	(inicializar 1 1)
+	(reintentar 0)
+)
+
+;;Template Casilla: Como su nombre lo indica, aquí se especifican los campos necesarios de una casilla, los cuales son:
+;;Fila: de tipo entero, columna: de tipo entero, colorCasilla: indica el color de la misma, utilizado inicialmente para imprimir el tablero correctamente.
+;;estado: hace referencia a qué símbolo se está imprimiendo en dicha casilla, dado por la fila y columna. Los 4 símbolos posibles son: ⬛, representando a una casilla negra,
+;; ⬜, representando a una casilla blanca, ✚, representando a una casilla ocupada por un ratón y ✪ representando a una casilla ocupada por un gato.
+(deftemplate Casilla
+	(field fila (type INTEGER))
+	(field columna (type INTEGER))
+	(field colorCasilla)
+	(field estado)
+)
+
+;;Template Raton: Como su nombre lo indica, aquí se especifican los campos necesarios de una casilla, los cuales son:
+;;posicionFilaAEvaluar: de tipo entero, hace referencia al valor que ingresa por teclado de la fila del tablero a la que quiere ir con el ratón, este campo no representa la posición real
+;;del ratón ya que esta tiene que primero pasar por una regla que compruebe que la fila ingresada es válida. 
+;;posicionColumAEvaluar: igual que el campo anteriormente descrito (posicionFilaAEvaluar), con la única diferencia de que este hace alusión a la columna.
+;;posicionFilaR: de tipo entero, hace referencia a la posición de la fila actual del ratón. posicionColumR: de tipo entero, hace referencia a la posición de la columna actual del ratón.
+;;contadorMovimientos: de tipo entero, sirve como contador del número total de movimientos que ha realizado el ratón. Simplemente sirve para ver el número de movimientos.
+(deftemplate Raton
+	(field posicionFilaAEvaluar(type INTEGER))
+	(field posicionColumAEvaluar(type INTEGER))
+	(field posicionFilaR (type INTEGER))
+	(field posicionColumR (type INTEGER))
+	(field contadorMovimientos (type INTEGER))
+)
+
+;;Hechos de inicio del ratón: Aquí se llenan 3 campos necesarios de inicio para el ratón:
+;;Se agrega el primer hecho posicionFilaR con un valor de 8, haciendo alusión de que inicialmente el ratón va a estar en la octava (última fila).
+;;Se agrega el segundo hecho posicionColumR con un valor de 3, indicando que la columna será la tercera inicialmente. Cabe recalcar que se podría haber pedido al usuario en qué columna querría empezar,
+;;sin embargo, no se vio necesario. Ya que desde la columna 3, puede llegar a cualquier casilla de la tercer fila (si así lo quisiera) en el mismo número de movimientos.
+;;Por último de parte del ratón, se agregó el valor de 0 al hecho de contadorMovimientos, ya que inicialmente, el ratón empieza con 0 movimientos dado a que la partida aún no ha empezado.
+;;Dentro de este bloque de definición de hechos iniciales del ratón también se llenó el de la casilla correspondiente ya que se debe indicar que se debe de emparejar la posición de la casilla con la del ratón.
+;;Es por esto que se agrega el valor de 8 en la fila de la casilla y para la columna, el valor de 3. El color de la casilla en negra, dado a que si en esa posición, inicialmente está un ratón, es porque es una casilla negra.
+;;En el estado se agrega el símbolo ✚, debido a que como se mencionó anteriormente, es el símbolo que representa al ratón.
+(deffacts ratonInicial
+
+	(Raton
+		(posicionFilaR 8)		
+		(posicionColumR 3)
+		(contadorMovimientos 0) 
+	)
+	(Casilla 
+		(fila 8)
+		(columna 3)
+		(colorCasilla negra)
+		(estado ✚)
+	)
+)
+
+;;Template Gato: Aquí se definen los 6 campos correspondientes a los gatos:
+;;numeroGato: sirve como identificador único de cada gato, ya que cada gato debe ser único para poder evaluar su posición y posteriormente aplicar los movimientos a cada uno correctamente
+;;posicionFilaAEvaluar: de tipo entero, al igual que el campo del mismo nombre en el template del ratón, no hace referencia a la posición de la fila real/actual del gato, sino a una posible posición.
+;;Debido a que primero debe de pasar por una regla que compruebe que la potencial posición no esté ocupada por otro gato o el ratón.
+;;posicionColumAEvaluar: de tipo entero, es básicamente el mismo campo que el anterior con la diferencia de que hace referencia a la columna en lugar de la fila.
+;;posicionFilaG: de tipo entero, hace referencia a la posición de la fila actual del gato
+;;posicionColumG: de tipo entero, hace referencia a la posición de la columna actual del gato
+;;ultimaRegla: sirve para llevar un registro de la última regla o situación por la que ha sido evaluado algún gato.
+(deftemplate Gato
+	(field numeroGato (type INTEGER))
+	(field posicionFilaAEvaluar (type INTEGER))	
+	(field posicionColumAEvaluar (type INTEGER))	
+	(field posicionFilaG (type INTEGER))		
+	(field posicionColumG (type INTEGER))
+	(field ultimaRegla)
+)
+
+;;En este bloque de definición de hechos, se llenan los valores iniciales para cada gato:
+;;En numeroGato, los valores van desde 1 hasta 4, dado a que son cuatro gatos.
+;;Para la posicionFilaG, todos los gatos llevan un valor de 1, dado a que empiezan en la primer fila
+;;En la posicionColumG, los valores para las columnas son 2, 4, 6, 8, respectivamente para cada gato, de izquierda a derecha.     
+(deffacts numerosDeGatos
+	(Gato
+		(numeroGato 1)
+		(posicionFilaG 1)
+		(posicionColumG 2)
+	)
+	(Gato
+		(numeroGato 2)
+		(posicionFilaG 1)
+		(posicionColumG 4)
+	)
+	(Gato
+		(numeroGato 3)
+		(posicionFilaG 1)
+		(posicionColumG 6)
+	)
+	(Gato
+		(numeroGato 4)
+		(posicionFilaG 1)
+		(posicionColumG 8)
+	)
+) 
+
+;;A diferencia de la casilla que hace referencia a la posición inicial del ratón en el tablero que se agregó manualmente, para las casillas iniciales de los gatos, se optó por crear una regla que se encargue de ello.
+;;Es por esto que esta regla toma el numeroGato ?n, la posicionFilaG ?f (la fila en la que se encuentra), la posicionColumG ?c (la columna en la que se encuentra). Además toma una casilla con una fila ?f y columna ?c.
+;;Iguales que las del gato, y almacena el hecho contador ?n en la variable ?h. Y se hace la comparación de que ?n sea menor que 5, debido a que solo hay 4 gatos. En el lado derecho de la regla, se modifica el estado
+;;de dicha casilla por el símobolo de un ratón ✪, luego se almacena en la variable ?cont la suma de ?n + 1, ya que tiene que ir incrementando en 1. Se elimina el hecho almacenado en ?h, es decir el contador, para posteriormente
+;;insertar el valor incrementado en 1.  
+(defrule InicializarCasillasGatos
+	(Gato (numeroGato ?n)(posicionFilaG ?f)(posicionColumG ?c))
+	?casilla <- (Casilla(fila ?f)(columna ?c))
+	?h <- (contadorNumeroGato ?n)
+	(test(< ?n 5))
+	=>
+	(modify ?casilla(estado ✪))
+	(bind ?cont(+ ?n 1))
+	
+	(retract ?h)
+	(assert(contadorNumeroGato ?cont))
+	
+)
+ 
+;;Esta regla sirve para inicializar los valores de los campos del template Casilla, debido a que son 64 casillas, no sería óptimo definirlos manualmente.
+;;Es por esta razón que se optó por simular un bucle tipo "for", en el cual se utiliza el hecho inicializar, previamente ingresado en los hechos iniciales, con sus dos valores, inicialmente 1 1
+;; las variables ?i y ?j sirven como variables de iteracción para indicar el valor de las filas y columnas de las casillas respectivamente.
+;;La única condición para que esta regla se ejecute es que el producto de ?i y ?j sea menor o igual que 64, debido a que solo se necesita que el valor de ambas variables lleguen hasta 8.
+;;Cuando esta regla se ejecuta elimina el hecho almacenado por ?h, el cual es el hecho de inicializar con sus dos valores ?i y ?j. Luego se realiza una comparación de que cuando el valor de la columna
+;;llegue al mayor posible, osea 8 y la fila no esté en la última, se hace un incremento en la fila y la columna se restaura a la primera. Así hasta llegar a la fila 8, columna 8.
+;;Finalmente, se añade el hecho del template Casilla en cada iteracción, con los valores de los campos de la fila y columna, los valores de ?i y ?j respectivamente. 
+(defrule InicializarCasillas
+	
+  ?h <- (inicializar ?i ?j&:(<= (* ?i ?j) 64))
+  =>
+  (retract ?h)
+
+  (if (and (= ?j 8) (not (= ?i 8)))
+    then
+		(assert (inicializar (+ ?i 1) 1))
+		 
+	else(assert (inicializar ?i (+ ?j 1)))
+   )
+  (assert(Casilla (fila ?i) (columna ?j)))
+     
+ )
+ 
+;;Teniendo en cuenta que la regla anterior se encargaba de agregar las 64 casillas sin ningún tipo de consideración adicional, al momento de agregar las casillas ocupadas inicialmente por los gatos y el ratón,
+;;se tendrían casillas duplicadas, es por ello que esta regla comprueba que si hay más de una casilla con la misma fila y columna, la elimina, esto sirve para reemplazar dicha casilla por la que está ocupada
+;;por un gato o un ratón inicialmente. En la primera condición se toma una fila ?f y una columna ?c para un estado ⬛, se toma este estado ya que solo las casillas negras tienen que ser evaluadas.
+;;Para la segunda condicion se toma el mismo valor de fila ?f y columna ?c (para una casilla distinta) y un estado ?e2, en la tercera condición que dicho estado ?e2 no sea el símbolo de casilla negra, es decir, solo puede ser el símbolo de 
+;;la casilla del ratón o de algún gato. Al final, simplemente se elimina el valor de ?casillaOriginal ya que es la casilla que tiene como estado ⬛ (una casilla negra), en lugar de tener a algún gato o al ratón.
+(defrule ReemplazoCasillasPorPiezasIniciales
+	
+	?casillaOriginal <- (Casilla (fila ?f)(columna ?c)(estado ⬛))
+	
+	(Casilla (fila ?f)(columna ?c)(estado ?e2))
+	(test(neq ?e2 ⬛))
+	=>
+	(retract ?casillaOriginal)
+)
+
+;;Esta regla sirve para evaluar si una casilla es negra, para ello toma una fila de una casilla ?f y una columna ?c, y un estado ?e1, el cual se almacena en ?casilla. En ?casillaEspejo se toman los mismos campos.
+;;Sin embargo, aquí la fila tiene el valor de la columna de la casilla anteriormente evaluada, y la columna tiene el  valor de la fila. Es por esto que lleva el nombre de ?casillaEspejo. También toma un estado ?e2.
+;;La primer comparación que se hace es que si alguno de los estados ?e1 o ?e2 de las dos casillas evaluadas es nula, se traduce la comparación en true, esta comparación es para que la regla no se siga activando luego
+;;de que tengan un valor que no sea nulo. Las siguientes comparaciones son que si el valor de ?f es par y el valor de ?c es impar, la regla se ejecuta. La lógica detrás de esta comparación es que las casillas negras 
+;;siempre tienen una fila par y una columna impar, o una fila impar y una columna par. Es por esto que se infiere que las dos casillas son negras. Y se modifica el campo colorCasilla en ambas casillas.
+(defrule EvaluarSiEsCasillaNegra
+	?casilla <- (Casilla(fila ?f)(columna ?c)(estado ?e1))
+	?casillaEspejo <- (Casilla (fila ?c)(columna ?f)(estado ?e2))
+	(test(or(eq ?e1 nil)(eq ?e2 nil))) 						
+	(test(= (mod ?f 2) 0))
+	(not (test(= (mod ?c 2) 0)))
+	=>
+	
+	(modify	?casilla(colorCasilla negra))
+    (modify ?casillaEspejo(colorCasilla negra))
+	
+)
+
+;;Esta regla básicamente establece que si el valor en el campo colorCasilla de una casilla es negro, el estado de dicha casilla debe ser el símbolo ⬛. Para ello, se toma el colorCasilla de una casilla y que el mismo tenga un valor
+;;de "negra", y un estado ?e. Se hacen las comparaciones de que dicho estado no sea ni ⬛(casilla negra), ✚(casilla ocupada por el ratón) o ✪(casilla ocupada por un gato). Esto último se hace para que la reegla no se siga activando
+;;innecesariamente. Como se mencionó anteriormente, se infiere que el valor del estado de dicha casilla es ⬛.
+(defrule CasillaNegraEstadoNegro
+	?casilla <- (Casilla(colorCasilla negra)(estado ?e))
+	(test(neq ?e ⬛)) 										;;para que no se siga activando
+	(test(neq ?e ✚))
+	(test(neq ?e ✪))
+	=>
+	(modify	?casilla(estado ⬛))
+)
+
+;;Aquí se establecen las casillas blancas, que si bien es cierto no forman parte del ecosistema del juego, son necesarias para imprimir el tablero correctamente. Se toma un estado ?e de una casilla y si la misma tiene un valor nulo,
+;;se infiere que es una casilla blanca, ya que no es negra, ni está ocupada por el ratón ni por un gato. Es por esto que se modifica el campo estado de ?casilla y se inserta el valor de ⬜.
+(defrule EstablecerCasillasBlancas
+	?casilla <- (Casilla(estado ?e))
+	(test(eq ?e nil))
+	=>
+	(modify ?casilla(estado ⬜))
+)
+
+;;Esta regla sirve para inicializar el valor de las dos variables que hacen de contador para simular un bucle for y así imprimir el tablero. Lo primero que encontramos es un hecho de control imprimirTablero, este hecho se inserta cada 
+;;vez que se requiera imprimir el tablero, es decir, después de cada movimiento del ratón o un gato. Simplemente imprime una cadena de guiones para marcar la parte superior del tablero e inserta el hecho (imprimir 1 1), similar al hecho
+;;(inicializar 1 1), con la diferencia de que este se usa para imprimir el tablero. El valor tanto para las filas y columnas empiezan en 1, es por esto que en primera instancia tiene estos valores.
+(defrule ImprimirTableroInicio
+  (imprimirTablero)
+  =>
+  (printout t crlf "+---------------------+" crlf "|")
+  (assert (imprimir 1 1))
+)
+  
+;;En esta regla se imprimen en consola todas las casillas con sus diferentes estados. La primer condición es básicamente la misma que en la de inicializar las casillas, es decir, que el producto de los valores de ?i y ?j no supere a 64.
+;;Debido a que estos dos deben de llegar a máximo 8 y 8. Luego se toman las filas ?i y columnas ?j para cada casilla con su respectivo estado ?e. En el lado derecho de la regla, se elimina el hecho almacenado en ?imprimir para luego ser
+;;insertado nuevamente, se imprime el estado ?e, que corresponde a cada casilla. Y se hace la comparación de que si ?j llegó a su límite, se imprima un caracter indictivo del límite derecho del tablero. Así mismo, cuando el valor de las
+;;dos variables, tanto ?i y ?j lleguen a su límite, se impriman los guiones indicativos del final del tablero. Para poder hacer el incremento tanto de las filas como de las columnas, se debe hacer la misma comparación descrita en la regla
+;;InicializarCasillas.
+(defrule ImprimirTablero
+  ?imprimir <- (imprimir ?i ?j&:(<= (* ?i ?j) 64))
+  ?casilla <- (Casilla (fila ?i) (columna ?j) (estado ?e))
+  =>
+  (retract ?imprimir)
+  (printout t ?e " ")
+  (if (= ?j 8)
+      then (printout t "|" ?i crlf))
+		
+  (if (and (= ?i 8) (= ?j 8))
+      then (printout t "+---------------------+" crlf))
+  (if (and (= ?j 8) (not (= ?i 8)))
+      then (printout t "|" )
+           (assert (imprimir (+ ?i 1) 1))
+    else (assert (imprimir ?i (+ ?j 1))))
+)
+
+;;Esta regla sirve para pedirle al usuario la posición en la que quiere mover al ratón o para que algún gato haga un movimiento luego de que se haya imprimido por completo el tablero. Es por ello que la primera condición es que caundo el producto
+;; de ?i y ?j del hecho imprimir sea mayor que 64, es decir, que ya se ha imprimido todo el tablero. También se toma como condición que esté presente el hecho de control imprimirTablero. En el lado derecho de la regla, simplemente se eliminan
+;;ambos hechos para permitir que las demás reglas se ejecuten. 
+(defrule CederTurnoRatonOGato
+	?imprimir <- (imprimir ?i ?j&:(> (* ?i ?j) 64))
+	?imprimirTablero <-(imprimirTablero)
+	=>
+	(retract ?imprimir)
+	(retract ?imprimirTablero)
+	
+)
+
+;;Esta regla se encarga de pedirle al usuario que ingrese la fila y la columna en la que quiere mover al ratón. Para ello, se evalua que exista el hecho de control solicitarPosicion, y que no exista el hecho imprimirTablero.
+;;También se verifica que no exista el hecho turnoGato, ya que no es el turno de algún gato sino del ratón. Así mismo, se evalúa que no exista el hecho verificarPosicionRaton. Esto último se realiza para que no se vuelva a ejecutar la regla
+;;en caso de que el usuario escoja una posición inválida. Por último se almacena en la variable ?raton el único raton existente. En el lado derecho de la regla se piden las posiciones tanto de la fila como la columna a través de la instrucción
+;;read, estos valores se agregan a los campos posicionFilaAEvaluar y posicionColumAEvaluar respectivamente. Luego de esto se inserta el hecho verificarPosicionRaton para que se ejecute la regla de validar los datos ingresados en esta.     
+(defrule SolicitarPosiciónRatón
+	(solicitarPosicion)
+	(not(imprimirTablero))
+	(not(turnoGato))
+	(not(verificarPosicionRaton))
+	?raton <- (Raton)
+	=>
+	(printout t "Ingrese la posicion de la fila: ")
+	(modify ?raton(posicionFilaAEvaluar (read)))
+	(printout t "Ingrese la posicion de la columna: ")
+	(modify ?raton(posicionColumAEvaluar(read)))
+	(assert(verificarPosicionRaton))
+)
+
+;;En esta regla se valida que los datos de la posición del ratón ingresada por el usuario sean permitidas. Para ello se evalúa primero que exista el hecho solicitarPosicion y verificarPosicionRaton. Se toman todos los campos del template Raton
+;;es decir, una posicionFilaR ?pF y posicionColumR ?pC que hacen referencia a la fila y a la columna actual del ratón respectivamente. La posicionFilaAEvaluar ?pFE y la posicionColumAEvaluar ?pCE son los valores que el usuario ingresó por teclado
+;;y a los cuales se les va a hacer la validación, también se toma el contadorMovimientos ?c para posteriormente, incrementarlo en 1 en caso de que el movimiento sea correcto. Se toman dos casillas, la primera, la posible casilla en la que se va
+;;a mover el ratón, es por ello que el estado para esta casilla debe ser ⬛, haciendo alusión a que no está ocupada por ningún otro elemento. La otra casilla, es la casilla actual en la que se encuentra el ratón. Después se hace la comparación 
+;;de que la resta en valor absoluto de las posición actual con la posición a evaluar sea igual a 1. Esto se traduce en que no se puede mover más de 1 fila y 1 columna de distancia en un movimiento. En el lado derecho de la regla se tiene una variable
+;;?contador que incrementa el contador de movimientos del ratón. Se modifican los campos de la posición de la fila y columna actual, por los valores ya evaluados de ?pFE Y ?pCE. El estado de la primer casilla de la regla pasa a ser ✚, indicando 
+;;que en esa casilla ahora está el ratón, también se modifica el valor del estado de la que era la ?casillaActual, ahora se cambia por el símbolo de casilla negra, debido a que el ratón ya no está en esa posición. Se eliminan los hechos de verificarPosicionRaton
+;;junto con el de solicitarPosicion, debido a que ya han sido evaluados. Finalmente, se insertan los hechos imprimirTablero y transicionDeTurno. Debido a que luego de este movimiento se tendrá que imprimir el tablero nuevamente y posteriormente el turno de algún gato.
+(defrule VerificarPosicion
+	?solPosR <-	(solicitarPosicion)
+	?v <- (verificarPosicionRaton)
+	?raton <- (Raton(posicionFilaR ?pF)
+					(posicionColumR ?pC)
+					(posicionFilaAEvaluar ?pFE)
+					(posicionColumAEvaluar ?pCE)
+					(contadorMovimientos ?c))
+	
+	?casilla <-(Casilla(fila ?pFE) (columna ?pCE) (estado ⬛))
+	?casillaActual <- (Casilla(fila ?pF) (columna ?pC))
+	(test(= 1 (abs(- ?pF ?pFE))))
+	(test(= 1 (abs(- ?pC ?pCE))))
+	=>
+
+	(bind ?contador (+ 1 ?c)) 
+	(modify ?raton (posicionFilaR ?pFE)(posicionColumR ?pCE)(contadorMovimientos ?contador))
+	(modify ?casilla(estado ✚))
+	(modify ?casillaActual(estado ⬛))
+	(retract ?v)
+	(retract ?solPosR)
+	(assert(imprimirTablero))
+	(assert(transicionDeTurno))
+)
+
+;;En caso de que el usuario ingrese una posición inválida, se le pedirá nuevamente que ingrese la pasición del ratón. Esta regla tiene un salience de -1 debido a que primero se tiene que ejecutar la regla de VerificarPosicion antes que esta. Se evalúa que exista
+;;el hecho solicitarPosicion y también el de verificarPosicionRaton debido a que se infiere que si estos hechos aún no se han eliminado, es porque el usuario no digitó correctamente la posición. Por eso, en el lado derecho de la regla, se muestra ese mensaje
+;;y se elimina el hecho de verificarPosicionRaton, ya que considerando que se volverá a pedir la posición, ese hecho no debería de existir en esa instancia.
+(defrule PedirPosicionAlUsuarioNuevamente
+	(declare(salience -1))
+	(solicitarPosicion)
+	?v <- (verificarPosicionRaton)
+	=>
+	(printout t crlf "Posición no permitida, por favor vuelva a ingresar..." crlf)
+	(retract ?v)
+)
+
+;;Como se indicó al inicio, para poder salir de la ejecución del programa, el usuario, simplemente tiene que ingresar como fila y columna, el valor de 0. Por esta razón esta regla se evalúa primero que la de VerificarPosicion, para no hacer esa evaluación
+;;innecesaria, se evalúa que exista el hecho solicitarPosicion. Además, se toman los valores de las posiciones a evaluar ?pFE (fila a evaluar) y ?pCE (columna a evaluar )y el contador de movimientos del ratón ?c. Luego de hae la comparación de que dicho valor de ?c, sea mayor que 0, debido 
+;;a que tiene que haber al menos un movimiento para salir de la ejecución del programa. Las demás comparaciones son de que tanto ?pFE como ?pCE sean iguales que 0. Si es así, se elimina el hecho de solicitarPosicion, y por lo tanto, la ejecución del programa finaliza.
+(defrule RevisarSiSalirDeEjecución
+	(declare(salience 1))
+	
+	?solPosR <-	(solicitarPosicion)
+	?raton <- (Raton(posicionFilaAEvaluar ?pFE)(posicionColumAEvaluar ?pCE)(contadorMovimientos ?c))
+	(test(> ?c 0))
+	(test(= ?pFE 0))
+	(test(= ?pCE 0))
+	=>
+	(retract ?solPosR)
+)
+
+;;Esta regla sirve para pasar del turno del ratón al turno de los gatos, para esto se evalúa que exista el hecho transicionDeTurno, hecho que existe si se ha comprobado que la posición ingresada por el usuario del ratón, es correcta. También que no exista el hecho
+;;imprimirTablero, debido a que esta regla se tiene que cumplir después de que se haya impremido todo el tablero actualizado con el último movimiento del ratón. En el lado derecho de la regla, se elimina el hecho de transicionDeTurno y se imprime en consola un 
+;;un mensaje para continuar, y que algún gato realize su movimiento después de haber ingresado algún caracter. Por supuesto, antes de que algún gato haga algún movimiento, debe de existir el hecho turnoGato, y este se inserta aquí. 	
+(defrule TransicionTurnoRatonAGato
+	?h <- (transicionDeTurno)
+	(not(imprimirTablero))
+	=>
+	(retract ?h)
+	(printout t crlf "Ingrese cualquier caracter para continuar..."  (read) crlf)
+	(assert(turnoGato))
+)
+
+;;Como su nombre lo indica, esta regla sirve para emparejar el nuevo movimiento hecho por algún gato y así actualizar el tablero. Es por esto, que esta regla tiene un salience alto. Se evalúa que exista el hecho reintentar ?, hecho que cuando tiene un valor de 1, significa
+;;que se está reintentando con otro gato o el mismo, otro movimiento, debido a que en la situación en que fue evaluado, dicho gato, no se pudo mover, debido a que había otro gato o estaba el gato en la potencial casilla. También, se evaúa la existencia del hecho actualizarTableroGato
+;;el cual es un hecho de control que se inserta después de cada movimiento de algún gato. Por supuesto, se toman las posiciones a evaluar (?pFE, ?pCE) y las posiciones actuales(?pF, ?pC) del gato que vaya a hacer el movimiento, también se tomam dos casillas como en el caso de la
+;;validación en el ratón, una de la ?casillaActual  y otra de la ?posibleCasilla. En el lado derecho se elimina el hecho de reintentar para luego insertar el mismo con un valor de 0, debido a que si se cumple esta regla es porque el gato pudo llegar a su objetivo. 
+;;Se modifica el campo de las posicionFilaG y el de la posicionColumG, por los valores previamente evaluados. Asímismo, se modifica el estado del que era la casilla acutual, por el del símbolo de una casilla negra desocupada, por último se modifica el estado de la ?posibleCasilla
+;;por el símbolo de un gato. Se elimina el hecho de actualizarTableroGato debido a que ya se actualizó. Se inserta el hecho de control imprimirTablero ya que se debe de imprimir con la nueva posición del gato, y también se inserta el hecho de control solicitarPosicion
+;;dado a que después de esto se debe de solicitar la posición del ratón al usuario nuevamente.
+(defrule EmparejarNuevoMovimientoGatoConCasilla
+	(declare(salience 10))
+	?reintentar <- (reintentar ?)
+	?actualizarTableroG <- (actualizarTableroGato)
+	?gato <- (Gato (posicionFilaAEvaluar ?pFE)(posicionColumAEvaluar ?pCE)(posicionFilaG ?pF)(posicionColumG ?pC))
+	?casillaActual <- (Casilla(fila ?pF) (columna ?pC))
+	?posibleCasilla <- (Casilla(fila ?pFE) (columna ?pCE)(estado ⬛)) 
+	=>
+	(retract ?reintentar)
+	(assert (reintentar 0))
+	(modify ?gato(posicionFilaG ?pFE)(posicionColumG ?pCE))
+	(modify ?casillaActual(estado ⬛))
+	(modify ?posibleCasilla(estado ✪))
+	(retract ?actualizarTableroG)
+	(assert(imprimirTablero))
+	(assert(solicitarPosicion))
+)
+
+;;Esta regla se encarga de volver a insertar el hecho de control turnoGato, hecho que como se mencionó anteriormente, sirve para evaluar los diferentes escenarios en los que se puede encontrar un gato en concreto. Para ello, evalúa que no exista el hecho de solicitarPosicion
+;;ni que haya un hecho de turnoGato, dado a que cuando una regla de alguna situación de algún gato, se cumple, esta se elimina. Se toma el hecho reintentar sin importar su valor. Se toman todas las posiciones del gato en concreto, tanto las de evaluar como las actuales.
+;;Se comprueba que no sean iguales, ya que si lo son, es porque dicho gato sí concretó su movimiento y no tiene sentido ejecutar esta regla si ese es el caso. Se tomam los valores de la fila ?pFE y columna ?pCE, las cuales son pertenecientes a las posiciones a evaluar del gato.
+;;También se toma el estado ?e de dicha casilla. Se verifica que el estado de dicha casilla no sea el de casilla negra desocupada. Finalmente se modifica el valor del hecho de reintentar a 1 ya que quiere decir que este gato no pudo concretar su movimiento y actualmente se 
+;;encuetra en un reintento. Luego se modifican los valores de los campos posicionFilaAEvaluar y posicionColumAEvaluar por los valores de las posiciones reales para que esta regla no se vuelva a ejecutar con el mismo gato. Para volver a evaluar los diferentes escenarios, 
+;;se inserta el hecho de control turnoGato nuevamente.
+(defrule ReintentarConOtroGato
+	(not(solicitarPosicion))
+	(not(turnoGato))
+	?reintentar <- (reintentar ?)
+	?gato <- (Gato(posicionFilaAEvaluar ?pFE)(posicionColumAEvaluar ?pCE)(posicionFilaG ?pF)(posicionColumG ?pC))
+	(not(test(= ?pFE ?pF)))
+	(not(test(= ?pCE ?pC)))
+	(Casilla(fila ?pFE)(columna ?pCE)(estado ?e))
+	(test(neq ?e ⬛))
+	=>
+	(retract ?reintentar)
+	(assert(reintentar 1))
+	(modify ?gato(posicionFilaAEvaluar ?pF)(posicionColumAEvaluar ?pC))
+	(assert(turnoGato))
+)
+
+;;-------------------ESTRATEGIAS DE JUEGO PARA QUE LOS GATOS NO PUEDAN PERDER------------------------------
+
+;;Para evitar redundancias, se indica de manera general, los nombres de las variables que siempre van a estar presentes en las reglas:
+;;Cuando se trate de la posición de la fila de un ratón (posicionFilaR), se refiere a la variable ?f
+;;Cuando se trate de la posición de la columna de un ratón (posicionColumR), se refiere a la variable ?c
+;;Cuando se trate del número del gato (numeroGato), se refiere a la variable ?n1, ?n2, ?n3 o ?n4
+;;Cuando se trate de la posición de la fila de un gato (posicionFilaG) se refiere a la variable ?pFG1, ?pFG2, ?pFG3 o ?pFG4
+;;Cuando se trate de la posición de la columna de un gato (posicionColumG) se refiere a la variable ?pCG1, ?pCG2, ?pCG3 o ?pCG4
+
+;;Siempre y cuando el ratón esté en una fila con distancia mayor de 2 de un gato, este último deberá moverse libremente. Siempre tiene la prioridad de hacerlo, el ratón que se encuentre en la menor fila. En todas las reglas de movimientos de los gatos, lo primero que siempre
+;;se encuentra en la regla, es que exista el hecho de control turnoGato. Luego de emparejar los hechos de los campos de las filas tanto como la de los gatos. como la del ratón, se campara que la última regla ?uR del gato que se va a mover, no sea esta misma, 
+;;debido a que, los gatos tienen que alternar el movimiento efectuado en esta regla, y no solo uno. Además también es útil para evitar ciclos infinitos, en caso de qe el gato seleccionado no pueda efectuar su movimiento.
+;; Se comprueba que la posición de la fila del gato que se va a mover, sea la menor, por eso, se hacen las comparaciones y ?pFG1, la fila del gato que se moverá, es la menor de todas. Por último, se comprueba
+;;que la fila ?f del ratón, tenga una distancia de al menos 2 unidades con respecto a la fila del gato que se moverá. En el lado derecho de la regla, se encuentra la comparación de que si el gato se encuentra en una fila par ?pFG1, se mueva una columna hacia la derecha
+;;y si es impar, hacia la izquierda, esto para mantener, un orden. Se modifica el campo de las posiciones de la fila y la columna a evualuar (posicionFilaAEvaluar y posicionColumAEvaluar) en el ?gato y también se establece que la última regla evaluada para ese gato fue esta regla. Como en todas las reglas
+;;de movimientos de los gatos, se elimina el hecho de control turnoGato y se inserta el hecho de actualizarTableroGato, para hacer la respectiva evaluación de si los valores establecidos, pueden llegar a dicha casilla objetivo.
+(defrule RatonMasDe2FilasDebajoDeGato
+	(declare(salience 12))			
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(contadorMovimientos ?contador))
+	?gato <-(Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1)(ultimaRegla ?uR))
+	(Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	(Gato(numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG3)(posicionColumG ?pCG3))
+	(Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG4)(posicionColumG ?pCG4))
+	
+	(test(neq ?uR RatonMasDe2FilasDebajoDeGato))
+	
+	(test(<= ?pFG1 ?pFG2))
+	(test(<= ?pFG2 ?pFG3))
+	(test(<= ?pFG3 ?pFG4))
+	
+	(test(> (- ?f ?pFG1) 2))
+
+	=>
+	
+	(bind ?nuevapF (+ ?pFG1 1))
+	(if(= (mod ?pFG1 2) 0)
+		then (bind ?nuevapC (+ ?pCG1 1))
+		else (bind ?nuevapC (- ?pCG1 1))
+	)
+	
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla RatonMasDe2FilasDebajoDeGato))
+	
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+
+)
+
+;;Misma regla que la anterior, sin embargo, esta se activa si por alguna razón, el gato seleccionado en la regla anterior no podía moverse a la casilla objetivo, porque dicha casilla estaba ocupada. Esta regla tiene un salience menor. Se omiten las comparaciones
+;;de que la fila ?pFG1 del gato que se va a mover, sea la menor. Y simplemente se comprueba que la distancia entre la fila ?f del ratón y la fila ?pFG1 del gato, sea mayor a 2. Y el lador derecho de la regla, es exactamente el mismo que la regla anterior.
+(defrule RatonMasDe2FilasDebajoDeGatoSiElÚltimoNoPuedeMoverse
+	(declare(salience 3))			
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(contadorMovimientos ?contador))
+	?gato <-(Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1)(ultimaRegla ?uR))
+	(Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	(Gato(numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG3)(posicionColumG ?pCG3))
+	(Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG4)(posicionColumG ?pCG4))
+	
+	(test(neq ?uR RatonMasDe2FilasDebajoDeGato))
+	(test(> (- ?f ?pFG1) 2))
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))
+	(if(= (mod ?pFG1 2) 0)
+		then (bind ?nuevapC (+ ?pCG1 1))
+		else (bind ?nuevapC (- ?pCG1 1))
+	)
+	
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla RatonMasDe2FilasDebajoDeGato))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+;;Esta regla sirve para modificar el valor del campo últimaRegla del gato que tenga como últimaRegla "RatonMasDe2FilasDebajoDeGato", esto ocurrirá cuando la distancia en filas entre este gato y algún otro gato, sea mayor que 1. Recordemos que una de las utilidades
+;;del campo ultimaRegla de los gatos es el de evitar bucles infinitos, ya que si no se puede efectuar el movimiento con ese gato, CLIPS lo emparejará de nuevo en esa regla. Otra de las utilidades, es alternar el movimiento que produce esa regla, y no siempre
+;;mover al mismo gato ya que si es así, no se mantendría un orden entre las filas de los gatos. Sin embargo, en esa regla hay una condición que indica que la última regla del gato que se moverá, no tiene que ser esa regla. Por otro lado, tiene que haber alguna forma 
+;;de reiniciar este campo ya que si nunca se reinicia, ese gato jamás volverá a ingresar a dicha regla. Y obviamente, todos los gatos pasan por más de una vez por esa regla por partida. 
+;;Para ello, primero se indica que el hecho reintentar esté en 0, ya que no se debe de reiniciar este campo mientras esté en ejecución un reintento. Luego se toma la fila ?pFG1 y la ultimaRegla que sea la regla "RatonMasDe2FilasDebajoDeGato". Así como 
+;;la fila ?pFG2 de otro gato. Se hace la  comparación de que la distancia en filas del gato con fila ?pFG2 y la fila ?pFG1 del gato que se moverá, sea mayor de 1. De esta forma, se modifica el campo ultimaRegla a nulo (nil), y el gato volverá a estar disponible
+;;para que pueda entrar en un futuro a dicha regla.
+(defrule ReiniciarCampo-RatonMasDe2FilasDebajoDeGato
+	(declare(salience 2))
+	(reintentar 0)
+	?gato <- (Gato (numeroGato ?n1)(posicionFilaG ?pFG1)(ultimaRegla RatonMasDe2FilasDebajoDeGato))
+	(Gato (numeroGato ?n2&~?n1)(posicionFilaG ?pFG2))
+	(test(> (- ?pFG2 ?pFG1) 1))
+	=>
+	(modify ?gato(ultimaRegla nil))
+)
+		
+
+;;Esta regla hace alusión a que cuando haya un ratón en medio dos gatos, el más lejano deberá moverse, en este caso, como se trata de la mitad derecha del tablero, se moverá hacia la derecha el gato que se encuentre más a la izquierda. Es por esto que se toman
+;;las posiciones del ratón tanto para la fila y para la columna. También se toman las posiciones de las filas y columnas de todos los gatos. Claro, haciendo referencia a que en los campos de numeroGato todos deben de ser diferentes. Y que los dos últimos gatos
+;;tienen el mismo valor de fila ?pFG3. Luego de esto se hacen las comparaciones de que el valor de la columna ?c del ratón tiene que ser mayor que 3, debido a que debe de estar en la parte centro-derecha del tablero. Asismismo, que la posición de la columna ?pCG1
+;;sea menor que cuatro. También que la columna ?pCG1 de un gato sea menor o igual que la columna de ?pCG2 de otro gato. La distancia entre la fila del raton ?f y la fila del gato con fila ?pFG3, debe ser de 1. La distancia entre la columna del gato con columna
+;;?pCG4 y el otro gato con columna ?pCG3, debe ser de 2. La distancia entre la columna del gato con columna ?pCG4 y la columna ?c del ratón, debe ser de 1. Por último, la distancia entre la columna ?c del ratón y la columna del gato con columna ?pCG3, debe de ser 1.
+;;En el lado derecho de la regla se tiene que la nueva posición para la fila del gato ?nuevapF, es la suma de la posición de la fila actual + 1, ya que los gatos se mueven hacia abajo siempre, y la nueva posición de la columna ?nuevapC, también es la suma de la
+;;variable ?pCG1 + 1 , correspondiente a la columna del gato que se va a mover. Se modifica el campo de las posiciones de la fila y la columna a evualuar (posicionFilaAEvaluar y posicionColumAEvaluar) en el ?gato y también se establece que la última regla evaluada para ese gato fue esta regla. Como en todas las reglas
+;;de movimientos de los gatos, se elimina el hecho de control turnoGato y se inserta el hecho de actualizarTableroGato, para hacer la respectiva evaluación de si los valores establecidos, pueden llegar a dicha casilla objetivo.
+(defrule RatonEnMedioDeDosGatosMitadDerecha
+	 ?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(posicionColumR ?c))
+	?gato <- (Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1))
+    (Gato (numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	(Gato (numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG3)(posicionColumG ?pCG3))
+	(Gato (numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG3)(posicionColumG ?pCG4))
+	
+	(test(> ?c 3))
+	(test(< ?pCG1 4))
+	(test(<= ?pCG1 ?pCG2))
+	(test(= (- ?f ?pFG3) 1))
+	(test(= (- ?pCG4 ?pCG3) 2))
+	(test(= (- ?pCG4 ?c) 1))
+	(test(= (- ?c ?pCG3) 1))
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))
+    (bind ?nuevapC (+ ?pCG1 1))
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla RatonEnMedioDeDosGatosMitadDerecha))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+;;De la misma forma que la anterior regla, esta regla hace alusión a que cuando haya un ratón en medio dos gatos, el más lejano deberá moverse, en este caso, como se trata de la mitad izquierda del tablero, se moverá hacia la izquierda el gato que se encuentre más a la derecha. Es por esto que se toman
+;;las posiciones del ratón tanto para la fila y para la columna. También se toman las posiciones de las filas y columnas de todos los gatos. Claro, haciendo referencia a que en los campos de numeroGato todos deben de ser diferentes. Y que los dos primeros gatos
+;;tienen el mismo valor de fila ?pFG1. Luego de esto se hacen las comparaciones de que el valor de la columna ?c del ratón tiene que ser menor que 4, debido a que debe de estar en la parte centro-izquierda del tablero. Asismismo, que la posición de la columna ?pCG4
+;;sea mayor que cuatro. También que la columna ?pCG4 de un gato sea menor o igual que la columna de ?pCG3 de otro gato. La distancia entre la fila del raton ?f y la fila del gato con fila ?pFG1, debe ser de 1. La distancia entre la columna del gato con columna
+;;?pCG2 y el otro gato con columna ?pCG1, debe ser de 2. La distancia entre la columna del gato con columna ?pCG2 y la columna ?c del ratón, debe ser de 1. Por último, la distancia entre la columna ?c del ratón y la columna del gato con columna ?pCG1, debe de ser 1.
+;;En el lado derecho de la regla se tiene que la nueva posición para la fila del gato ?nuevapF, es la suma de la posición de la fila actual + 1, ya que los gatos se mueven hacia abajo siempre, y la nueva posición de la columna ?nuevapC, es la resta de la
+;;variable ?pCG4 - 1 , correspondiente a la columna del gato que se va a mover. Se modifica el campo de las posiciones de la fila y la columna a evualuar (posicionFilaAEvaluar y posicionColumAEvaluar) en el ?gato y también se establece que la última regla evaluada para ese gato fue esta regla. Como en todas las reglas
+;;de movimientos de los gatos, se elimina el hecho de control turnoGato y se inserta el hecho de actualizarTableroGato, para hacer la respectiva evaluación de si los valores establecidos, pueden llegar a dicha casilla objetivo.
+(defrule RatonEnMedioDeDosGatosMitadIzquierda
+	 ?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(posicionColumR ?c))
+	(Gato (numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1))
+    (Gato (numeroGato ?n2&~?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG2))
+	(Gato (numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG3))
+	?gato <- (Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG3)(posicionColumG ?pCG4))
+	
+	(test(< ?c 4))
+	(test(> ?pCG4 4))
+	(test(>= ?pCG4 ?pCG3))
+	(test(= (- ?f ?pFG1) 1))			
+	(test(= (- ?pCG2 ?pCG1) 2))
+	(test(= (- ?pCG2 ?c) 1))
+	(test(= (- ?c ?pCG1) 1))
+	=>
+	(bind ?nuevapF (+ ?pFG3 1))
+	(bind ?nuevapC (- ?pCG4 1))
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla RatonEnMedioDeDosGatosMitadIzquierda))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+;;Siempre que un gato tenga adelante suya solo una casilla negra y en la otra casilla no esté un ratón, este se deberá de mover. Después de evaluar que exista el hecho de control turnoGato, se evalúan dos casillas con la misma fila ?f1 y con columnas distintas
+;;?c1 y ?c2, así como dos estados ?e1 y ?e2. Claro, también hay que evaluar los 4 gatos, siendo este primero que aparece en la regla, el que se va a mover (?gato). Se comprueba que el que tiene mayor prioridad para moverse es el ?gato debido a que, es el que
+;;tiene la fila menor, por eso ?pFG1 tiene que ser menor o igual que todas las demás filas en la que se encuentran los demás gatos. Se comprueba ademásque la distancia entre las filas ?f1 de las casillas que se van evaluar y la fila del gato a mover, sea de 1
+;;también que la distancia entre la columna ?c2 de la segunda casilla y la columna ?pCG1 del gato que se moverá, sea de 1 y lo mismo para la distancia entre la columna ?pCG1 del gato y la columna ?c1 de la primer casilla, sea de 1. Se hace una comparación
+;;de que si el estado de la casilla de la izquierda es casilla negra vacía y el de la casilla de la derecha del gato es que está otro gato o viceversa, se cumple esta regla. Por lo que en el lado derecho de la regla,se hace la comparación de que si el estado
+;;?e1 de la casilla de la izquierda del gato, es casilla negra vacía, el gato tendrá que moverse allí, restándole 1 a su posición de columna ?pCG1.    
+(defrule EvaluarDosPosicionesPosiblesGato
+	(declare(salience 11))
+	?turnoGato <- (turnoGato)
+	(Casilla(fila ?f1)(columna ?c1)(estado ?e1))
+	(Casilla(fila ?f1)(columna ?c2&~?c1)(estado ?e2))
+	?gato <- (Gato (numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1)(ultimaRegla ?uR))
+	
+	(Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	(Gato(numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG3)(posicionColumG ?pCG3))
+	(Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG4)(posicionColumG ?pCG4))
+	
+	(test(<= ?pFG1 ?pFG2))
+	(test(<= ?pFG2 ?pFG3))
+	(test(<= ?pFG3 ?pFG4))
+	
+	(test(= (- ?f1 ?pFG1) 1))
+	
+	(test(= (- ?c2 ?pCG1) 1))
+	(test(= (- ?pCG1 ?c1) 1))
+	(or(and(test(eq ?e1 ⬛))(test(eq ?e2 ✪)))(and(test(eq ?e1 ✪))(test(eq ?e2 ⬛))))
+
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))
+	(if(eq ?e1 ⬛)
+		then (bind ?nuevapC (- ?pCG1 1))
+		else (bind ?nuevapC (+ ?pCG1 1))
+	)
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla EvaluarDosPosicionesPosiblesGato))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+;;Esta regla es exactamente la misma que la anterior, sin embargo tiene un salience mayor ya que, siempre que un gato se encuentre en la esquina, deberá de moverse antes que los otros. Por eso aquí solo hace falta pedir los campos de un gato, ya que no se
+;;hace la comparación anterior de que el que se mueva tiene que ser el que tenga la menor fila, sino que aquí tiene la prioridad el que se encuentra en la columna 1 u 8. También solo se evalúa una casilla debido a que si el gato está en un extremo, solo 
+;;tiene una casilla negra a su disposición. La diferencia en la comparación, con la regla anterior es que aquí se debe de verificar que la columna ?pCG1 del gato sea 1 y que la casilla que se va a evaluar, sea la que está a la izquierda (distancia entre columna ?c1 de casilla y ?pCG1, de 1.
+;;O por otro lado que se encuentre la columna ?pCG1 del gato en la columna 8 y que la casilla esté a la izquierda del mismo. Si se cumple esta regla, se hace la comparación de que si la columna del gato ?pCG1 es 8, este se mueve hacia la izquierda, osea ?pCG1 - 1.
+;;Caso contrario, se mueve a la derecha. 
+(defrule EvaluarDosPosicionesPosiblesGatoExtremos
+	(declare(salience 12))
+	?turnoGato <- (turnoGato)
+	(Casilla(fila ?f1)(columna ?c1)(estado ?e1))
+	?gato <- (Gato (numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1)(ultimaRegla ?uR))
+	(test(= (- ?f1 ?pFG1) 1))
+	(or(and(test(= ?pCG1 1))(test(= (- ?c1 ?pCG1) 1)))(and(test(= ?pCG1 8))(test(= (- ?pCG1 ?c1) 1))))
+	(test(eq ?e1 ⬛))
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))
+	(if(= ?pCG1 8)
+		then (bind ?nuevapC (- ?pCG1 1))
+		else (bind ?nuevapC (+ ?pCG1 1))
+	)
+	
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla EvaluarDosPosicionesPosiblesGato))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)		
+
+;;Siempre y cuando, de derecha a izquierda, haya un gato - el ratón - otro gato, este se moverá dependiendo de la fila en que se encuentren dichos gatos. Por eso aquí se toman los campos del ratón, y dos gatos. La fila ?f, es igual para todos. Las columnas, obviamente
+;;sí varían. Se hace la comparación de que la distancia entre la columna ?pCG1 del ?gato1 y la columna ?c del ratón, sea de 2 y que la distancia entre la columna ?c del ratón y la columna ?pCG2 del gato 2, sea de dos también. En el lado derecho de la regla,
+;;se evalúa que si la fila ?f es par, entonces el gato que se mueve es el de la derecha del ratón, hacia la derecha, osea el ?gato2. En caso contrario, se mueve el gato de la izquierda del ratón, hacia la izquirda, osea el ?gato1. 
+(defrule UnGatoEnLaMismaFilaQueRatonIzquierdaYDerecha
+	(declare(salience 1))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f) (posicionColumR ?c))
+	?gato1 <- (Gato (numeroGato ?n1)(posicionFilaG ?f)(posicionColumG ?pCG1))
+	?gato2 <- (Gato (numeroGato ?n2&~?n1)(posicionFilaG ?f)(posicionColumG ?pCG2))
+	
+	(test(= (- ?pCG1 ?c) 2))
+	(test(= (- ?c ?pCG2) 2))
+	
+	
+	=>
+	(bind ?nuevapF (+ ?f 1))
+	(if(= (mod ?f 2) 0)
+		then(bind ?nuevapC (+ ?pCG2 1))
+			(modify ?gato2(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC))
+		else(bind ?nuevapC (- ?pCG1 1))
+			(modify ?gato1(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC))
+	)
+	
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+
+;;Si se encuentra un gato que está en digonal de un ratón que se encuentra a la izquierda de este, y no hay otro gato en una casilla atrás a la derecha, y una fila arriba y columna a la izquirda, haya otro gato, el gato en diagonal deberá de moverse hacia la izquierda, siempre y cuando no esté en una fila par. 
+;;Para ello toma, los campos del ratón, 3 gatos y una casilla, los dos primeros gatos están en la misma fila ?pFG1. Se hace la comparación de que ?pFG1 no sea par, de que la distancia entre la fila ?f del ratón y la fila ?pFG1 del gato que se moverá, sea de 2, de que la distancia
+;;entre la fila ?pFG1 del gato que se moverá y la fila de la casilla ?fCasilla, sea de 1 y lo mismo para la distancia entre la columna ?pCG1 del gato que se moverá. Se comprueba que el estado ?e de dicha casilla sea casilla negra desocupada. Además, que la distancia
+;;de filas entre la del ratón ?f y la del otro gato ?pFG2 sea de 1, de igual forma, que la distancia entre la columna ?c del ratón y la columna de este mismo gato ?pCG2, sea de 1. Se comprueba que la última regla visitada por el gato que se moverá
+;;no sea esta misma, para evitar bucles infinitos en caso de reintento. Se comprueba que la distancia en columnas entre el gato que se moverá ?pCG1 y la columna del ratón ?c, sea de 2. De esta forma el gato se mueve hacia la izquierda. 
+(defrule GatoEnDiagonalDelRatonIzquierdaPrioridad
+	(declare(salience 12))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f) (posicionColumR ?c))
+
+	?gato <- (Gato (numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1)(ultimaRegla ?uR))
+	(Gato (numeroGato ?n2&~?n1)(posicionFilaG ?pFG1)(posicionColumG ?c))
+	(Gato (numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	(Casilla (fila ?fCasilla)(columna ?cCasilla)(estado ?e))
+	
+	(not(test(= (mod ?pFG1 2) 0)))
+	(test(= (- ?f ?pFG1) 2))
+	(test(= (- ?pFG1 ?fCasilla) 1))
+	(test(= (- ?pCG1 ?cCasilla) 1))
+	(test(eq ?e ⬛))
+	
+	(test(= (- ?f ?pFG2) 1))
+	(test(= (- ?c ?pCG2) 1))
+	
+	(test(neq ?uR GatoEnDiagonalDelRatonIzquierda))
+	
+	(test(= (- ?pCG1 ?c) 2))
+	
+	=>
+	
+	(bind ?nuevapF (+ ?pFG1 1))		
+	(bind ?nuevapC (- ?pCG1 1))
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla GatoEnDiagonalDelRatonIzquierda))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+
+;;Esta es básicamente la misma regla que la anterior sin embargo aquí, el salience es menor, debido a que no es tan crucial como la regla anterior, la diferencia radica en que, aquí no hay un gato a la izquierda del ratón y una fila encima como en el caso
+;;anterior. Por lo tanto las comparaciones son las mismas. Excluyendo claro a los demás gatos, 
+(defrule GatoEnDiagonalDelRatonIzquierda
+	(declare(salience 9))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f) (posicionColumR ?c))
+	
+	?gato <- (Gato (numeroGato ?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2)(ultimaRegla ?uR))
+	(Casilla (fila ?fCasilla)(columna ?cCasilla)(estado ?e))
+	(test(= (- ?f ?pFG2) 2))
+	(test(= (- ?pFG2 ?fCasilla) 1))
+	(test(= (- ?pCG2 ?cCasilla) 1))
+	(test(eq ?e ⬛))
+	(test(neq ?uR GatoEnDiagonalDelRatonIzquierda))
+	(test(= (- ?pCG2 ?c) 2))
+	=>
+	
+	(bind ?nuevapF (+ ?pFG2 1))		
+	(bind ?nuevapC (- ?pCG2 1))
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla GatoEnDiagonalDelRatonIzquierda))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+;;Misma regla que la anterior, sin embargo aquí el ratón está en diagonal a la derecha del gato, por lo tanto al final de la regla se mueve hacia la derecha. Otra diferencia es que se evalúa que la diferencia de distancia entre la fila ?pFG1 del gato que 
+;;se va a mover y la fila ?pFG2 de otro gato no sea de 1, y que la diferencia entre columnas de los mismos gatos, no sea de 1, lo mismo para la fila ?pFG3 del tercer gato y ?pFG1 del gato que se moverá. También, la diferencia entre columnas de estos dos gatos
+;;no debe ser de 1. Finalmente se comprueba que la diferencia de distancia entre la columna ?c del ratón y el gato que se moverá, sea de 2.
+(defrule GatoEnDiagonalDelRatonDerecha
+	(declare(salience 9))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f) (posicionColumR ?c))
+	?gato <- (Gato( numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1)(ultimaRegla ?uR))
+	(Gato (numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	(Gato (numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG3)(posicionColumG ?pCG3))
+	
+	(test(neq ?uR GatoEnDiagonalDelRatonDerecha))
+	(test(= (- ?f ?pFG1) 2))
+	(not(and(test(= (- ?pFG1 ?pFG2) 1))(test(= (- ?pCG2 ?pCG1) 1))))
+	(not(and(test(= (- ?pFG3 ?pFG1) 1))(test(= (- ?pCG3 ?pCG1) 1))))
+	
+	(test(= (- ?c ?pCG1) 2))
+	
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))		
+	(bind ?nuevapC (+ ?pCG1 1))
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla GatoEnDiagonalDelRatonDerecha))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+	
+
+)
+
+;;Cuando un gato  tiene a otro gato una fila atrás y una columna a la derecha, el primero se deberá de mover hacia la izquierda y así darle paso libre al de la derecha para que así se pueda mover libremente. Por ello se involucran a dos gatos
+;;y al ratón en cuestión, el cual tiene que estar a dos filas por debajo del gato que se va a mover, como se especifica en la comprobación de distancia entre la fila ?f del ratón y la fila ?pFG1 del gato que se moverá. Cabe recalcar que el gato que se 
+;;encuentra más arriba, tiene que estar en la mitad izquierda del tablero, por eso se hace la comparación de que la columna del segundo gato ?pCG2 sea menor a 5. También se comprueba que la distancia entre filas desde la fila ?f del ratón hasta la del gato que se moverá
+;;pFG1, sea de 2. Lo mismo para la distancia entre ?pFG1 y ?pFG2, pero en esta ocasión la distancia debe ser 1. De la misma forma, la distancia entre la columna ?pCG2 del segundo gato y la de la columna ?pCG1 del gato que se moverá  , debe ser 1. De esta forma
+;;el gato se mueve hacia la izquierda (?pCG1 - 1) 
+(defrule UnGatoYOtroGatoArribaALaDerecha
+	(declare(salience 10))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(posicionColumR ?c))
+	?gato <- (Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1)(ultimaRegla ?uR))
+	(Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	(test(neq ?uR UnGatoYOtroGatoArribaALaDerecha))
+	(test(= (- ?f ?pFG1) 2))
+	(test(= (- ?pFG1 ?pFG2) 1))
+	(test(= (- ?pCG2 ?pCG1) 1))	
+	(test(< ?pCG2 5))
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))		
+	(bind ?nuevapC (- ?pCG1 1))
+	
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla UnGatoYOtroGatoArribaALaDerecha))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+	
+)
+
+;;Cuando un gato  tiene a otro gato una fila atrás y una columna a la izquierda, el primero se deberá de mover hacia la derecha y así darle paso libre al de la derecha para que así se pueda mover libremente. Por ello se involucran a dos gatos
+;;y al ratón en cuestión, el cual tiene que estar a dos filas por debajo del gato que se va a mover, como se especifica en la comprobación de distancia entre la fila ?f del ratón y la fila ?pFG2 del gato que se moverá. Cabe recalcar que el gato que se 
+;;encuentra más arriba, tiene que estar en la mitad derecha del tablero, por eso se hace la comparación de que la columna del primer gato ?pCG1 sea mayor a 4. También se comprueba que la distancia entre filas desde la fila ?f del ratón hasta la del gato que se moverá
+;;pFG2, sea de 2. Lo mismo para la distancia entre ?pFG2 y pFG1, pero en esta ocasión la distancia debe ser 1. De la misma forma, la distancia entre la columna ?pCG2 del gato que se moverá y la de la columna ?pCG1 del primer gato, debe ser 1. De esta forma
+;;el gato se mueve hacia la derecha (?pCG2 + 1)  
+(defrule UnGatoYOtroGatoArribaALaIzquierda
+	(declare(salience 10))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(posicionColumR ?c))
+    (Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1)(ultimaRegla ?uR))
+	?gato <- (Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	
+	(test(neq ?uR UnGatoYOtroGatoArribaALaIzquierda))
+	
+	(test(= (- ?f ?pFG2) 2))
+	(test(= (- ?pFG2 ?pFG1) 1))
+	(test(= (- ?pCG2 ?pCG1) 1))	
+	(test(> ?pCG1 4))
+
+	=>
+	(bind ?nuevapF (+ ?pFG2 1))		
+	(bind ?nuevapC (+ ?pCG2 1))
+	
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla UnGatoYOtroGatoArribaALaIzquierda))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+	
+)
+
+;;Esta regla se ejecuta cuando el gato que está más a la izquierda tiene un gato en un fila más arriba y a la derecha, a otro gato, y que el ratón esté a dos filas del gato que se moverá. Para ello toma la posición de un ratón posicionFilaR ?f y posicionColumR ?c
+;;Para el gato que se moverá, se tiene una posicionFila ?pFG1 y una posicionColumG ?c que es la misma que la del ratón. Los demás, tienen posicionFilaG ?pFG2, ?PFG1 nuevamente para el tercer gato, ya que este se encuentra en la misma fila que el gato
+;;que se moverá. El último gato, solo interesa saer la posicionColumG ?pCG3. Primero se comprueba que la última regla ?uR del gato que se moverá, no sea esta misma. Luego de eso, se comprueba que la distancia entre la fila ?f del ratón y la fila pFG1
+;;del gato que sea moverá, sea de 2. Luego que las distancia entre la fila ?pFG1 del gato que se moverá y la distancia de otro gato con fila ?pFG2, sea 1. La distancia entre la columna ?pCG1 de un gato que y la columna ?c del ratón, sea 1. 
+;;La distancia entre la columna ?pCG2 de un gato y la columna ?pCG1 del otro gato, sea 1. Luego se compara de que la columna ?c que es igual tanto para el ratón como para el gato que se moverá, debe ser menor que todas o mayor que 4. Por eso se hacen las
+;;comparaciones de que ?c es menor o igual que ?pCG1 y este a su vez es menor o igual  que ?pCG2 y este a su vez, sea menor o igual que ?pCG3. Luego de esto, se infiere que el gato se tiene que mover hacia la izquierda (?c - 1), básicamente para tapar el posible 
+;;hueco del que se aprovecharía y también darle paso al otro gato que estaba arriba y que este mismo posteriarmente ocupe su lugar. Finalmente se modifica el campo de última regla, con el nombre de esta regla.  
+(defrule UltimoGatoDeDerechaAIzquierdaYOtroGatoArribaALaDerechaPrioridad	
+	(declare(salience 15))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(posicionColumR ?c))
+	?gato <- (Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?c)(ultimaRegla ?uR))
+	(Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG1))
+	(Gato(numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG2))	
+	(Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionColumG ?pCG3))	
+	
+	(test(neq ?uR UltimoGatoDeDerechaAIzquierdaYOtroGatoArribaALaDerecha))
+	(test(= (- ?f ?pFG1) 2))
+	(test(= (- ?pFG1 ?pFG2) 1))
+		
+	(test(= (- ?pCG1 ?c) 1))
+	(test(= (- ?pCG2 ?pCG1) 1))
+	(or(test(> ?c 4))(and(test(<= ?c ?pCG1))(test(<= ?pCG1 ?pCG2))(test(<= ?pCG2 ?pCG3))))
+	
+	
+	
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))		
+	(bind ?nuevapC (- ?c 1))
+	
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla UltimoGatoDeDerechaAIzquierdaYOtroGatoArribaALaDerecha))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+
+;;Esta regla se ejecuta cuando el gato que está más a la derecha tiene un gato en un fila más arriba y a la izquierda, a otro gato, y que el ratón esté a dos filas del gato que se moverá. Para ello toma la posición de un ratón posicionFilaR ?f y posicionColumR ?c
+;;Para el gato que se moverá, se tiene una posicionFila ?pFG1 y una posicionColumG ?c que es la misma que la del ratón. Los demás, tienen posicionFilaG ?pFG2, ?PFG1 nuevamente para el tercer gato, ya que este se encuentra en la misma fila que el gato
+;;que se moverá. El último gato, solo interesa saer la posicionColumG ?pCG3. Primero se comprueba que la última regla ?uR del gato que se moverá, no sea esta misma. Luego de eso, se comprueba que la distancia entre la fila ?f del ratón y la fila ?pFG1
+;;del gato que sea moverá, sea de 2. Luego que las distancia entre la fila ?pFG1 del gato que se moverá y la distancia de otro gato con fila ?pFG2, sea 1. La distancia entre la columna ?c del ratón y la columna ?pCG2 de un gato, sea 1. 
+;;La distancia entre la columna ?pCG2 de un gato y la columna ?pCG1 de otro gato, sea 1. Luego se compara de que la columna ?c que es igual tanto para el ratón como para el gato que se moverá, debe ser mayor que todas o menor que 5. Por eso se hacen las
+;;comparaciones de que ?c es mayor o igual que ?pCG1 y este a su vez es mayor o igual  que ?pCG2 y este a su vez, sea mayor o igual que ?pCG3. Luego de esto, se infiere que el gato se tiene que mover hacia la derecha (?c + 1), básicamente para tapar el posible 
+;;hueco del que se aprovecharía y también darle paso al otro gato que estaba arriba y que este mismo posteriarmente ocupe su lugar. Finalmente se modifica el campo de última regla, con el nombre de esta regla. 
+(defrule PrimerGatoDeDerechaAIzquierdaYOtroGatoArribaALaIzquierdaPrioridad	
+	(declare(salience 15))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(posicionColumR ?c))
+	
+	(Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1))
+	(Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))
+	?gato <- (Gato(numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG1)(posicionColumG ?c)(ultimaRegla ?uR))	
+	(Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionColumG ?pCG3))	
+	
+	(test(neq ?uR UltimoGatoDeDerechaAIzquierdaYOtroGatoArribaALaIzquierdaPrioridad))
+	(test(= (- ?f ?pFG1) 2))
+	(test(= (- ?pFG1 ?pFG2) 1))
+		
+	(test(= (- ?c ?pCG2) 1))
+	(test(= (- ?pCG2 ?pCG1) 1))
+	(or(test(< ?c 5))(and(test(>= ?c ?pCG2))(test(>= ?pCG2 ?pCG1))(test(>= ?pCG1 ?pCG3))))
+	
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))		
+	(bind ?nuevapC (+ ?c 1))
+	
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla UltimoGatoDeDerechaAIzquierdaYOtroGatoArribaALaIzquierdaPrioridad))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+;;La ejecución de esta regla es crucial, es por ello que tiene un salience mayor. La situación que esta evalúa es que haya un ratón dos fila por debajo de un gato y una fila por debajo de otro gato y que este último gato esté a la derecha del ratón
+;;Para ello se toma una posicionFilaR ?f y posicionColumR ?c. Se toman los cuatro gatos, cada uno con filas no necesariamente iguales, es por ello que estos tienen ?pFG1 para el gato que se moverá, ?pFG2, ?pFG3 y ?pFG4 para los demás gatos. En cuanto
+;;a la columna, la posicionColumG del gato que se moverá, tendrá que ser la misma que la del ratón, y los demás gatos tienen diferentes columnas ?pCG1, ?pCG2 y ?pCG3. Por último, para el gato que se moverá, se toma la última regla ?uR que este haya 
+;;visitado. Se hace la comprobación de que la fila del gato con fila ?pFG3 sea mayor que la fila del gato que se moverá o que la posición de la columna del gato con columna ?pCG2 sea mayor o igual que la columna ?c del ratón. En la otra condición
+;;se evalúa que la posición de la fila del gato con fila ?pFG4 sea mayor que la fila del ratón que se moverá, o que la posición de la columna del gato con columna ?pCG3 sea mayor o igual que la columna ?c del ratón. Después se verifica que la última
+;;regla visitada ?uR por el gato que se moverá no sea esta misma. Se comprueba que la distancia entre filas de la fila del ratón ?f y el gato con fila ?pFG2 es de 1 y con respecto a la fila del gato que se moverá, osea ?pFG1, sea de 2. Por último, 
+;;que la distancia entre columnas del gato que se moverá ?pCG1 y la columna ?c del ratón, sea de 1. De esta forma se infiere que el gato se tiene que mover una columna hacia la izquierda (- ?c 1).
+(defrule RatonDosFilasDebajoDeUnGatoYUnaFilaDeOtroGatoDerechaMayorPrioridad
+	(declare(salience 14))
+	?turnoGato <- (turnoGato)
+	
+	(Raton (posicionFilaR ?f)(posicionColumR ?c))
+	?gato1 <-(Gato (numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?c)(ultimaRegla ?uR))
+	(Gato (numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG1))
+	(Gato (numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG3)(posicionColumG ?pCG2))
+	(Gato (numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG4)(posicionColumG ?pCG3))
+	
+	(or(test(> ?pFG3 ?pFG1))(test(>= ?pCG2 ?c)))		;;Quiere decir que no hay nadie detrás que respalde el movimiento del gato
+	(or(test(> ?pFG4 ?pFG1))(test(>= ?pCG3 ?c)))
+	
+	(test(neq ?uR RatonDosFilasDebajoDeUnGatoYUnaFilaDeOtroGatoDerechaMayorPrioridad))
+	
+	
+	(test(= (- ?f ?pFG2) 1))
+	(test(= (- ?f ?pFG1) 2))
+	(test(= (- ?pCG1 ?c) 1))
+	
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))
+	(bind ?nuevapC (- ?c 1))
+	(modify ?gato1(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla RatonDosFilasDebajoDeUnGatoYUnaFilaDeOtroGatoDerechaMayorPrioridad))
+
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+;;Esta regla se activa cuando el ratón se encuentra en uno de los dos extremos del tablero y tiene a un gato en la misma fila y se encuentra a dos columnas del mismo. Para ello se toma una posicionFilaR ?f y posicionColumR ?c. Y solo hace falta un gato
+;;con posicionFilaG ?f, es decir la misma fila que el ratón, y una posicionColumG ?pCG1. Se compara que la posicion de la columna del ratón ?c sea igual a 1 y que la posición de la columna ?pCG1 del gato, sea 3. O por otro lado, que la columna ?c del ratón
+;;sea la 8 y la columna ?pCG1 del gato sea la sexta. Si se cumple la regla, la nueva posición de la columna del gato, se incrementará en uno (?pCG1 + 1) si el ratón se encuentra en la fila 8, en caso contrario se moverá hacia la izquierda (?pCG1 - 1).     
+(defrule EncerrarRatonExtremos
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f)(posicionColumR ?c))
+	?gato <- (Gato(posicionFilaG ?f)(posicionColumG ?pCG1))
+	(or(and(test(= ?c 1))(test(= ?pCG1 3)))(and(test(= ?c 8))(test(= ?pCG1 6))))
+	=>
+	(bind ?nuevapF (+ ?f 1))	
+	(if(= ?c 8)
+		then (bind ?nuevapC (+ ?pCG1 1))
+		else (bind ?nuevapC (- ?pCG1 1))
+	)
+	
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+
+)
+
+;;Esta regla es crucial debido a que la situación que evalúa es cuando hay una casilla en medio de un ratón y un gato y no hay otro gato a la izquierda del mismo para que respalde el movimiento. Tiene un salience bastante alto debido a que si se ejecuta 
+;;otra regla antes que esta, el ratón va a ganar la fila y por lo tanto, ha ganado. Se toma la posicionFilaR ?f de ratón y posicionColumR ?c del mismo. Se toman los cueatro gatos debido a que se necesita hacer la comparación de que los demás gatos
+;;deben de estar en una fila igual o mayor que la fila del gato que se va a mover. El gato que se moverá, tiene como posicionFilaG ?pFG1, los demás gatos tienen ?pFG2, ?pFG3 y ?pFG4 respectivamente ya que no tienen que ser necesariamente iguales. El gato
+;;que se moverá tendrá la única columna de gato que se considera en esta regla, es decir ?pCG1. Se toman dos casillas, una para evaluar que entre la fila del gato y el ratón no hay nadie más, y la otra para evaluar que no hay ningún otro gato a la izquierda
+;;del gato que se moverá. Por ello se toma la fila de la primer casilla ?fCasilla1, columna ?cCasilla1 y un estado de casilla negra desocupada. Para la otra casilla, la fila es la misma del gato que se va a mover, osea ?pFG1, otra columna ?cCasilla2 y ccmo
+;;estado igual que la anterior, casilla negra desocupada. Se hace la comparación de que la fila ?pFG2, ?pFG3 y ?pFG2 de los demás gatos sea mayor o igual que la del gato que se va a mover, osea ?pFG1. De la misma manera, que la distancia entre filas desde
+;;la fila ?f del ratón y la fila ?fCasilla1 de la primer casilla sea 1. También que la distancia entre columnas desde la columna ?pCG1 del gato que se moverá y la columna ?cCasilla1 de la primer casilla, sea de 1. Que la distancia entre filas, desde la 
+;;fila ?f del ratón y la fila ?pFG1 del gato que se moverá, sea de 2. Así como la distancia entre columnas desde la columna ?pCG1 del gato que se moverá y la columna ?cCasilla2 de la segunda casilla, tiene que ser de 2. También se evalúa que la posición del
+;;ratón esté dos columnas a la izquierda de la columna del gato que se moverá o que estén en la misma columna, osea ?pCG1 = ?c.
+(defrule CasillaNegraEnMedioDiagonalRatonYGato-NoHayOtroGatoAlLadoALaIzquierda
+	(declare(salience 15))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f) (posicionColumR ?c))
+	
+	?gato <- (Gato (numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1))
+	(Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2))
+    (Gato(numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG3))	
+	(Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG4))
+	
+	(Casilla (fila ?fCasilla1)(columna ?cCasilla1)(estado ⬛))
+	(Casilla (fila ?pFG1&~?fCasilla1)(columna ?cCasilla2)(estado ⬛))
+	
+	(and(test(>= ?pFG2 ?pFG1))(test(>= ?pFG3 ?pFG1))(test(>= ?pFG4 ?pFG1)))
+	(test(= (- ?f ?fCasilla1) 1))
+	(test(= (- ?pCG1 ?cCasilla1) 1))
+	(test(= (- ?f ?pFG1) 2))
+	(test(= (- ?pCG1 ?cCasilla2) 2))
+	
+	(or(test(= (- ?pCG1 ?c) 2))(test(= ?pCG1 ?c)))
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))		
+	(bind ?nuevapC (- ?pCG1 1))
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla  CasillaNegraEnMedioDiagonalRatonYGato-NoHayOtroGatoAlLadoALaIzquierda))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)
+
+;;Igual que la regla anterior esta regla también es crucial debido a que la situación que evalúa es cuando hay una casilla en medio de un ratón y un gato y no hay otro gato a la derecha del mismo para que respalde el movimiento. Tiene un salience bastante alto debido a que si se ejecuta 
+;;otra regla antes que esta, el ratón va a ganar la fila y por lo tanto, ha ganado. Se toma la posicionFilaR ?f de ratón y posicionColumR ?c del mismo. Se toman los cueatro gatos debido a que se necesita hacer la comparación de que los demás gatos
+;;deben de estar en una fila igual o mayor que la fila del gato que se va a mover. El gato que se moverá, tiene como posicionFilaG ?pFG1, los demás gatos tienen ?pFG2, ?pFG3 y ?pFG4 respectivamente ya que no tienen que ser necesariamente iguales. El gato
+;;que se moverá tendrá la única columna de gato que se considera en esta regla, es decir ?pCG1. Se toman dos casillas, una para evaluar que entre la fila del gato y el ratón no hay nadie más, y la otra para evaluar que no hay ningún otro gato a la izquierda
+;;del gato que se moverá. Por ello se toma la fila de la primer casilla ?fCasilla1, columna ?cCasilla1 y un estado de casilla negra desocupada. Para la otra casilla, la fila es la misma del gato que se va a mover, osea ?pFG1, otra columna ?cCasilla2 y ccmo
+;;estado igual que la anterior, casilla negra desocupada. Se hace la comparación de que la fila ?pFG2, ?pFG3 y ?pFG2 de los demás gatos sea mayor o igual que la del gato que se va a mover, osea ?pFG1. De la misma manera, que la distancia entre filas desde
+;;la fila ?f del ratón y la fila ?fCasilla1 de la primer casilla sea 1. También que la distancia entre columnas desde la columna ?cCasilla1 de la primer casilla y la columna ?pCG1 del gato que se moverá, sea de 1. Que la distancia entre filas, desde la 
+;;fila ?f del ratón y la fila ?pFG1 del gato que se moverá, sea de 2. Así como la distancia entre columnas desde la columna ?cCasilla2 de la segunda casilla y la columna ?pCG1 del gato que se moverá, tiene que ser de 2. También se evalúa que la posición del
+;;ratón esté dos columnas a la derecha de la columna del gato que se moverá o que estén en la misma columna, osea ?pCG1 = ?c.	
+(defrule CasillaNegraEnMedioDiagonalRatonYGato-NoHayOtroGatoAlLadoALaDerecha
+	(declare(salience 15))
+	?turnoGato <- (turnoGato)
+	(Raton (posicionFilaR ?f) (posicionColumR ?c))
+	
+	?gato <- (Gato (numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1))
+	(Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2))
+    (Gato(numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG3))	
+	(Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG4))
+	
+	(Casilla (fila ?fCasilla1)(columna ?cCasilla1)(estado ⬛))
+	(Casilla (fila ?pFG1&~?fCasilla1)(columna ?cCasilla2)(estado ⬛))
+	
+	
+	(and(test(>= ?pFG2 ?pFG1))(test(>= ?pFG3 ?pFG1))(test(>= ?pFG4 ?pFG1)))
+	(test(= (- ?f ?fCasilla1) 1))
+	(test(= (- ?cCasilla1 ?pCG1 ) 1))
+	(test(= (- ?f ?pFG1) 2))
+	(test(= (- ?cCasilla2 ?pCG1) 2))
+	
+	(or(test(= (- ?c ?pCG1) 2))(test(= ?pCG1 ?c)))
+	
+	=>
+	(bind ?nuevapF (+ ?pFG1 1))		
+	(bind ?nuevapC (+ ?pCG1 1))
+	(modify ?gato(posicionFilaAEvaluar ?nuevapF)(posicionColumAEvaluar ?nuevapC)(ultimaRegla  CasillaNegraEnMedioDiagonalRatonYGato-NoHayOtroGatoAlLadoALaDerecha))
+	(retract ?turnoGato)
+	(assert(actualizarTableroGato))
+)	
+		
+
+	
+;;Las reglas restantes consisten en evaluar las situaciones en la que los gatos pueden encerrar al ratón. Esta primera es cuando los cueatro gatos rodean al ratón por completo y no le dejan movimiento alguno posible. Tiene un salience alto debido a que
+;;es crucial que se ejecute primero ya que indica el final del juego. Se comprueba que exista el hecho de control solicitarPosicion ya que este hecho se inserta después del movimiento de un gato. Se toman la fila ?f y la columna ?c en donde se encuentra
+;;el ratón. Así como la de los 4 gatos, los pos primeros gatos tienen la misma fila ?pFG1, el primero y tercero tiene la misma columna ?pCG1 y el segundo y cuarto, la columna ?pCG2. Se verifica que el ratón efectivamente esté debajo de los dos gatos con
+;;fila ?pFG1, y encima de los dos gatos con fila ?pFG2, por eso se hacen las restas y comparaciones respectivas de que la distancia entre ?pFG2 y ?f sea igual a 1, lo mismo para la distancia entre ?f y ?pFG1. Para las columnas se revisa que el ratón con 
+;;con columna ?c esté a la izquierda de la de los gatos con columna ?pCG2 y a la derecha de los gatos con columna ?pCG1. Finalmente se elimina el hecho de control solicitarPosicion, terminando así, con la ejecución del programa, junto con un mensaje de agradecimiento.
+(defrule FinDelJuegoRatonEncerradoPorTodosLosGatos
+	(declare(salience 15))
+	?h <- (solicitarPosicion)
+	(Raton(posicionFilaR ?f)(posicionColumR ?c))
+	
+	(Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1))
+    (Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG2))
+    (Gato(numeroGato ?n3&~?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG1))	
+	(Gato(numeroGato ?n4&~?n3&~?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG2))	
+	
+	(test(= (- ?pFG2 ?f) 1))
+	(test(= (- ?f ?pFG1) 1))
+	(test(= (- ?pCG2 ?c) 1))
+	(test(= (- ?c ?pCG1) 1))
+
+	=>
+	(retract ?h)
+	(printout t crlf "---------GRACIAS POR JUGAR, LOS GATOS HAN GANADO------------")
+)		
+
+;;Esta regla hace referencia a otra situación de final de juego. En esta ocasión, el ratón se encuentra en la última fila y dos gatos lo encierran en una fila más arriba. Se establece que el gato debe de estar en la posicionFilaR de 8 y una posicionColumR
+;;?c, ya que esta puede variar. Se toman en cuenta dos gatos, los cuales deben de tener como posicionFilaG 7, ya que están una fila menos que la del ratón. Obviamente tiene diferentes posicionColumG ?pCG1 y ?pCG2, ya que están en diferentes columnas.
+;;Se comprueba que la distancia entre columnas del gato con columna ?pCG2 de la derecha y el ratón con columna ?c sea 1, y que la distancia entre columnas del ratón ?c y la columna ?pCG1 del gato de la izquierda sea de 1- Finalmente se elimina el hecho de 
+;;control solicitarPosicion, terminando así, con la ejecución del programa, junto con un mensaje de agradecimiento. 
+(defrule FinDelJuegoRatonEncerradoEnÚltimaFila
+	(declare(salience 15))
+	?h <- (solicitarPosicion)
+	(Raton(posicionFilaR 8)(posicionColumR ?c))
+	
+	(Gato(numeroGato ?n1)(posicionFilaG 7)(posicionColumG ?pCG1))
+    (Gato(numeroGato ?n2&~?n1)(posicionFilaG 7)(posicionColumG ?pCG2))
+    (test(= (- ?pCG2 ?c) 1))
+	(test(= (- ?c ?pCG1) 1))
+	=>
+	(retract ?h)
+	(printout t crlf "---------GRACIAS POR JUGAR, LOS GATOS HAN GANADO------------")
+)	
+
+;;Esta regla hace referencia a otra situación de final de juego. En esta ocasión, el ratón se encuentra en los extremos del tablero y dos gatos lo rodean. El ratón tiene una posicionFilaR ?f y posicionColumR ?c y se toman dos gtos con diferentes posicionFilaG
+;;?pFG1 y ?pFG2, pero con misma posicionColumG ?pCG1 ya que los dos se encuentran en la misma columna. Se compara que la distancia entre filas desde la fila ?pFG2 del segundo gato y la fila ?f del ratón sea de 1. Y desde la fila ?f del ratón hasta la fila 
+;;?pFG1 sea de 1. Por último se hace la comparación de que la columna ?c del ratón sea la primera y la columnas de los dos gatos sea la segunda o por el otro, la posición de la columna ?c del ratón es la última y la columna ?pCG1 de los dos gatos es la penúltima.
+;; Finalmente se elimina el hecho de control solicitarPosicion, terminando así, con la ejecución del programa, junto con un mensaje de agradecimiento.  
+(defrule FinDelJuegoRatonEncerradoEnExtremos
+	(declare(salience 15))
+	?h <- (solicitarPosicion)
+	(Raton(posicionFilaR ?f)(posicionColumR ?c))
+	
+	(Gato(numeroGato ?n1)(posicionFilaG ?pFG1)(posicionColumG ?pCG1))
+    (Gato(numeroGato ?n2&~?n1)(posicionFilaG ?pFG2)(posicionColumG ?pCG1))
+	(test(= (- ?pFG2 ?f) 1))
+	(test(= (- ?f ?pFG1) 1))
+	
+	(or(and(test(= ?c 1))(test(= ?pCG1 2)))(and(test(= ?c 8))(test(= ?pCG1 7))))
+   
+	=>
+	(retract ?h)
+	(printout t crlf "---------GRACIAS POR JUGAR, LOS GATOS HAN GANADO------------")
+)
+
+;;El último escenario posible por el que el ratón no tiene movimientos posibles, es esta, en la cual el ratón se encuentra en la última fila de la primer columna y solo hace falta un gato para que lo encierre. Es por esto que se pide que el valor para la 
+;;posicionFilaR del ratón sea 8 y la posicionColumR sea 1. De la misma forma, se pide que haya un gato en la posicionFilaG 7, osea una fila arriba, y como posicionColumG 2, es decir una columna hacia la derecha.  Finalmente se elimina el hecho de control 
+;;solicitarPosicion, terminando así, con la ejecución del programa, junto con un mensaje de agradecimiento.   
+(defrule FinDelJuegoRatonEncerradoEsquinaIzquierdaÚltimaFIla
+	(declare(salience 15))
+	?h <- (solicitarPosicion)
+	(Raton(posicionFilaR 8)(posicionColumR 1))
+	(Gato(posicionFilaG 7)(posicionColumG 2))
+	=>
+	(retract ?h)
+	(printout t crlf "---------GRACIAS POR JUGAR, LOS GATOS HAN GANADO------------")
+)			
+			
+
+
+
+	
+	
+		 
